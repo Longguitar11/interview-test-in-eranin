@@ -1,4 +1,4 @@
-<div ng-controller="LoginController">
+<!-- <div ng-controller="LoginController">
   <h2>Login</h2>
   <form ng-submit="login()">
     <input type="text" ng-model="username" placeholder="Username" required />
@@ -14,4 +14,49 @@
       required />
     <button type="submit">Verify</button>
   </form>
+</div> -->
+
+<div ng-controller="LoginController" class="login-container">
+  <div class="login-box">
+    <h2 class="login-title">Login</h2>
+    <form ng-submit="login()" class="login-form">
+      <input
+        type="text"
+        ng-model="username"
+        placeholder="Username"
+        class="input-field"
+        required
+      />
+      <input
+        type="password"
+        ng-model="password"
+        placeholder="Password"
+        class="input-field"
+        required
+      />
+      <button type="submit" class="btn-login">Login</button>
+    </form>
+
+    <!-- MFA Section -->
+    <div class="mfa-container" ng-show="mfaRequired">
+      <h3>Multi-Factor Authentication</h3>
+      <img
+        ng-src="{{ qrCodeUrl }}"
+        alt="QR Code"
+        ng-if="firstTimeMFA"
+        class="qr-code"
+      />
+      <form ng-submit="verifyMFA()" class="mfa-form">
+        <input
+          type="text"
+          ng-model="otp"
+          placeholder="Enter OTP"
+          maxlength="6"
+          class="input-field"
+          required
+        />
+        <button type="submit" class="btn-verify">Verify</button>
+      </form>
+    </div>
+  </div>
 </div>

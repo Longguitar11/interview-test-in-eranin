@@ -18,7 +18,7 @@ app.config(function ($routeProvider) {
 });
 
 // Auth Guard: Protect routes
-app.run(function ($rootScope, $location) {
+app.run(function ($rootScope, $location, $http) {
   $rootScope.$on('$routeChangeStart', function (event, next, current) {
     const token = sessionStorage.getItem('shortToken');
 
@@ -27,10 +27,17 @@ app.run(function ($rootScope, $location) {
     // If navigating to the home page, check if the token is valid
     if (next.$$route.originalPath === '/home') {
       if (!token || isTokenExpired(token)) {
-        // Token is missing or expired, redirect to login
+        // Prevent navigation until token is refreshed or user is redirected
         event.preventDefault();
-        alert('Your session has expired, please log in again.');
-        $location.path('/login');
+
+        // Try to refresh the short token using the long token
+        refreshShortToken($http, $location).then(function (newToken) {
+          if (newToken) {
+            console.log('refresh token and navigate to home');
+            // If token refresh was successful, proceed to the home page
+            $location.path('/home');
+          }
+        });
       }
     }
   });
@@ -90,37 +97,20 @@ app.controller('LoginController', function ($scope, $http, $location) {
 });
 
 app.controller('HomeController', function ($scope, $http, $location) {
-  // Function to refresh the short token using the long token
-  function refreshShortToken() {
-    const longToken = localStorage.getItem('longToken');
-
-    return $http
-      .post(baseUrl + '/refresh-token', { longToken: longToken })
-      .then(function (response) {
-        sessionStorage.setItem('shortToken', response.data.shortToken);
-        return response.data.shortToken;
-      })
-      .catch(function (error) {
-        // If long token is expired, log the user out
-        console.log('Long token expired. User must log in again.');
-        sessionStorage.removeItem('shortToken');
-        localStorage.removeItem('longToken');
-        alert('Your session has expired, please log in again.');
-        $location.path('/login');
-        return null;
-      });
-  }
-
   // Modify HTTP request to check for token expiration and refresh if necessary
-  function makeAuthenticatedRequest(config) {
+  function makeAuthenticatedRequest(config, http) {
     const shortToken = sessionStorage.getItem('shortToken');
 
     if (!shortToken || isTokenExpired(shortToken)) {
       // Short token is missing or expired, refresh it
-      refreshShortToken().then(function (newShortToken) {
+      refreshShortToken($http, $location).then(function (newShortToken) {
         if (newShortToken) {
+          console.log('refresh and call function');
           config.headers.Authorization = 'Bearer ' + newShortToken;
           return $http(config); // Make the original request after token refresh
+        } else {
+          // If no new token was returned, reject the promise
+          return Promise.reject('Failed to refresh short token');
         }
       });
     } else {
@@ -130,6 +120,22 @@ app.controller('HomeController', function ($scope, $http, $location) {
     }
   }
 
+  // Fetch the username using makeAuthenticatedRequest
+  makeAuthenticatedRequest({
+    method: 'GET',
+    url: baseUrl + '/get-username',
+    headers: {},
+  })
+    .then(function (response) {
+      $scope.username = response.data.username; // Store the username in $scope
+    })
+    .catch(function (error) {
+      if (error.status === 401) {
+        alert('Your session has expired, please log in again.');
+        $location.path('/login');
+      }
+    });
+
   $scope.disableMFA = function () {
     makeAuthenticatedRequest({
       method: 'POST',
@@ -137,6 +143,7 @@ app.controller('HomeController', function ($scope, $http, $location) {
       headers: {},
     })
       .then(function (response) {
+        console.log({ response });
         if (response.data.success) {
           alert('MFA disabled');
         }
@@ -146,6 +153,9 @@ app.controller('HomeController', function ($scope, $http, $location) {
           // Token expired, redirect to login
           alert('Your session has expired, please log in again.');
           $location.path('/login');
+        } else {
+          console.error('Error disabling MFA:', error);
+          alert('An error occurred while disabling MFA.');
         }
       });
   };

@@ -1,5 +1,17 @@
-<div ng-controller="HomeController">
+<!-- <div ng-controller="HomeController">
     <h2>Welcome, {{ username }}</h2>
     <button ng-click="disableMFA()">Disable MFA</button>
     <button ng-click="logout()">Sign Out</button>
+</div> -->
+
+<div ng-controller="HomeController" class="home-container">
+    <div class="home-box">
+        <h2 class="home-title">Welcome, {{ username }}</h2>
+        <div class="home-actions">
+            <button ng-click="disableMFA()" class="btn-disable-mfa">
+                Disable MFA
+            </button>
+            <button ng-click="logout()" class="btn-logout">Sign Out</button>
+        </div>
+    </div>
 </div>

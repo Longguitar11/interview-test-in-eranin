@@ -32,6 +32,7 @@ const authenticateJWT = (req, res, next) => {
     jwt.verify(token, SHORT_TOKEN_SECRET, (err, user) => {
       if (err) // If the token is expired, send 401 Unauthorized
       return res.status(401).send('Token expired or invalid');
+
       req.user = user;
       next();
     });
@@ -79,7 +80,7 @@ app.post('/login', (req, res) => {
   }
 });
 
-// 3. Verify MFA and issue tokens
+// Verify MFA and issue tokens
 app.post('/verify-mfa', (req, res) => {
   const { username, mfaCode } = req.body;
 
@@ -108,7 +109,18 @@ app.post('/verify-mfa', (req, res) => {
   }
 });
 
-// 5. Disable MFA
+// Get username (protected route)
+app.get('/get-username', authenticateJWT, (req, res) => {
+  const user = users[req.user.username];
+
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  res.json({ username: req.user.username });
+});
+
+// Disable MFA
 app.post('/disable-mfa', authenticateJWT, (req, res) => {
   const user = users[req.user.username];
 
@@ -132,7 +144,7 @@ app.post('/refresh-token', (req, res) => {
 
     // If long token is valid, issue a new short token
     const newShortToken = jwt.sign({ username: user.username }, SHORT_TOKEN_SECRET, {
-      expiresIn: '15m', // New short token expires in 15 minutes
+      expiresIn: '1m', // New short token expires in 15 minutes
     });
 
     res.json({ shortToken: newShortToken });

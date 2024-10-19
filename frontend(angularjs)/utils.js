@@ -29,4 +29,24 @@ function isTokenExpired(token) {
   return decodedToken.exp < currentTime; // True if the token is expired
 }
 
+// Function to refresh the short token using the long token
+function refreshShortToken(http, location) {
+  const longToken = localStorage.getItem('longToken');
+
+  return http
+    .post(baseUrl + '/refresh-token', { longToken: longToken })
+    .then(function (response) {
+      sessionStorage.setItem('shortToken', response.data.shortToken);
+      return response.data.shortToken;
+    })
+    .catch(function (error) {
+      // If long token is expired, log the user out
+      console.log('Long token expired. User must log in again.');
+      sessionStorage.removeItem('shortToken');
+      localStorage.removeItem('longToken');
+      alert('Your session has expired, please log in again.');
+      location.path('/login');
+      return null;
+    });
+}
 
